@@ -167,8 +167,8 @@ def fct_medm_reg_to_redshift(data_interval_end, **kwargs):
         merge_query = """
         MERGE INTO raw_data.fct_medm_reg_list
         USING temp_fct_medm_reg_list AS source
-        ON raw_data.fct_medm_reg_list.REG_ID = source.REG_ID 
-        AND raw_data.fct_medm_reg_list.TM_ST = source.TM_ST 
+        ON raw_data.fct_medm_reg_list.REG_ID = source.REG_ID
+        AND raw_data.fct_medm_reg_list.TM_ST = source.TM_ST
         AND raw_data.fct_medm_reg_list.TM_ED = source.TM_ED
         WHEN MATCHED THEN
         UPDATE SET
