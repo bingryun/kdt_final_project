@@ -15,7 +15,7 @@ kst = pendulum.timezone("Asia/Seoul")
 
 default_args = {
     'owner': 'chansu',
-    'depends_on_past': True,  # 선행작업의존여부
+    'depends_on_past': True,
     'start_date': pendulum.datetime(2024, 8, 2, tz=kst),
     'email_on_failure': False,
     'email_on_retry': False,
@@ -25,119 +25,121 @@ default_args = {
     'on_success_callback': slackbot.success_alert,
 }
 
+def fetch_api_data(api_url: str, params: dict) -> str:
+    response = requests.get(api_url, params=params)
+    if response.status_code != 200:
+        logging.error(f"ERROR : 응답 코드 오류 {response.status_code}")
+        logging.error(f"ERROR : 메세지 : {response.text}")
+        raise ValueError(f"ERROR : 응답코드오류 {response.status_code}, 메세지 : {response.text}")
+    logging.info(f"API 상태코드: {response.status_code}")
+    return response.text
+
+def parse_response_data(response_text: str) -> list:
+    if "#START7777" not in response_text or "#7777END" not in response_text:
+        logging.error("ERROR : 데이터 수신 실패", response_text)
+        raise ValueError(f"ERROR : 데이터 수신 실패 : {response_text}")
+    
+    lines = response_text.splitlines()
+    data = []
+    start_index = 0
+    
+    for i, line in enumerate(lines):
+        if line.startswith('# REG_ID'):
+            start_index = i + 1
+            break
+
+    for line in lines[start_index:]:
+        if line.strip() and not line.startswith('#7777END'):
+            columns = line.split(',')
+            columns = [col.strip() for col in columns if col.strip()]
+            data.append(parse_columns(columns))
+    
+    return data
+
+def parse_columns(columns: list) -> tuple:
+    column_len = 12
+    if len(columns) < column_len:
+        columns += [None] * (column_len - len(columns))
+    try:
+        reg_id = columns[0]
+        tm_fc = pendulum.parse(columns[1], strict=False) if columns[1] else None
+        tm_ef = pendulum.parse(columns[2], strict=False) if columns[2] else None
+        mod = columns[3]
+        stn = columns[4]
+        c = columns[5]
+        min_val = columns[6]
+        max_val = columns[7]
+        min_l = columns[8]
+        min_h = columns[9]
+        max_l = columns[10]
+        max_h = columns[11]
+        return (reg_id, tm_fc, tm_ef, mod, stn, c, min_val, max_val, min_l, min_h, max_l, max_h)
+    except ValueError as e:
+        logging.warning(f"행을 파싱하는 중 오류 발생: {e}")
+        return None
+
+def save_to_s3(data: list, s3_key: str) -> None:
+    csv_buffer = StringIO()
+    csv_writer = csv.writer(csv_buffer)
+    csv_writer.writerow(['REG_ID','TM_FC','TM_EF','MODE_KEY','STN_ID','CNT_CD','MIN_TA','MAX_TA','MIN_L_TA','MIN_H_TA','MAX_L_TA','MAX_H_TA'])
+    csv_writer.writerows(data)
+    
+    s3_hook = S3Hook(aws_conn_id='AWS_S3')
+    bucket_name = 'team-okky-1-bucket'
+    
+    try:
+        s3_hook.load_string(
+            csv_buffer.getvalue(),
+            key=s3_key,
+            bucket_name=bucket_name,
+            replace=True
+        )
+        logging.info(f"데이터를 S3에 저장 성공: {s3_key}")
+    except Exception as e:
+        logging.error(f"S3 업로드 실패: {e}")
+        raise ValueError(f"S3 업로드 실패: {e}")
+
 def fct_afs_wc_to_s3(data_interval_end: pendulum.datetime, **kwargs) -> None:
     api_url = "https://apihub.kma.go.kr/api/typ01/url/fct_afs_wc.php"
     api_key = "HGbLr74hS2qmy6--ITtqog"
     
     data_interval_end_kst = data_interval_end.in_timezone(kst)
-    logging.info(f"data_interval_end_kst: {data_interval_end_kst}")
     one_hour_before = data_interval_end_kst - pendulum.duration(hours=1)
     tmfc1 = one_hour_before.strftime('%Y%m%d%H')
-    logging.info(f"tmfc1: {tmfc1}")
     tmfc2 = one_hour_before.strftime('%Y%m%d%H')
 
     params = {
-    'stn': '',
-    'reg': '',
-    'tmfc': '',
-    'tmfc1': tmfc1,
-    'tmfc2': tmfc2,
-    'tmef1': '',
-    'tmef2': '',
-    'mode': 0,
-    'disp': 1,
-    'help': 0,
-    'authKey': api_key
+        'stn': '',
+        'reg': '',
+        'tmfc': '',
+        'tmfc1': tmfc1,
+        'tmfc2': tmfc2,
+        'tmef1': '',
+        'tmef2': '',
+        'mode': 0,
+        'disp': 1,
+        'help': 0,
+        'authKey': api_key
     }
 
-    response = requests.get(api_url, params=params)
-    response_200 = 200
-    column_len = 12
-    logging.info(f"API 상태코드: {response.status_code}")
+    response_text = fetch_api_data(api_url, params)
+    data = parse_response_data(response_text)
 
-    if response.status_code == response_200:
-        response_text = response.text
-        logging.info(f"응답 데이터:\n{response_text}")
+    if data:
+        tm_fc = pendulum.parse(data[0][1], strict=False) if data[0][1] else None
+        year = tm_fc.strftime('%Y')
+        month = tm_fc.strftime('%m')
+        day = tm_fc.strftime('%d')
+        hour = tm_fc.strftime('%H')
+        formatted_date = tm_fc.strftime('%Y_%m_%d_%H')
+        s3_key = f'fct_afs_wc/{year}/{month}/{day}/{hour}/{formatted_date}_fct_afs_wc.csv'
 
-        if "#START7777" in response_text and "#7777END" in response_text:
-            lines = response_text.splitlines()
-            data = []
-
-            start_index = 0
-            for i, line in enumerate(lines):
-                if line.startswith('# REG_ID'):
-                    start_index = i + 1
-                    break
-            logging.info(f"start_index: {start_index}")
-            for line in lines[start_index:]:
-                if line.strip() and not line.startswith('#7777END'):
-                    columns = line.split(',')
-                    columns = [col.strip() for col in columns if col.strip()]  
-
-                    if columns[-1] == '=':
-                        columns = columns[:-1]
-                    
-                    if len(columns) < column_len:
-                        columns += [None] * (12 - len(columns))
-
-                    try:
-                        reg_id = columns[0]
-                        tm_fc = pendulum.parse(columns[1], strict=False) if columns[1] else None
-                        tm_ef = pendulum.parse(columns[2], strict=False) if columns[2] else None
-                        mod = columns[3]
-                        stn = columns[4]
-                        c = columns[5]
-                        min_val = columns[6]
-                        max_val = columns[7]
-                        min_l = columns[8]
-                        min_h = columns[9]
-                        max_l = columns[10]
-                        max_h = columns[11]
-                        data.append((reg_id, tm_fc, tm_ef, mod, stn, c, min_val, max_val, min_l, min_h, max_l, max_h))
-                    except ValueError as e:
-                        logging.warning(f"행을 파싱하는 중 오류 발생: {e}")
-                
-            if data:
-                # s3 버킷 디렉토리 생성 기준을 tm_fc 기준으로
-                year = tm_fc.strftime('%Y')
-                month = tm_fc.strftime('%m')
-                day = tm_fc.strftime('%d')
-                hour = tm_fc.strftime('%H')
-                formatted_date = tm_fc.strftime('%Y_%m_%d_%H')
-
-                csv_buffer = StringIO()
-                csv_writer = csv.writer(csv_buffer)
-                csv_writer.writerow(['REG_ID','TM_FC','TM_EF','MODE_KEY','STN_ID','CNT_CD','MIN_TA','MAX_TA','MIN_L_TA','MIN_H_TA','MAX_L_TA','MAX_H_TA'])
-                csv_writer.writerows(data)
-                
-                s3_hook = S3Hook(aws_conn_id='AWS_S3')
-                bucket_name = 'team-okky-1-bucket'
-                s3_key = f'fct_afs_wc/{year}/{month}/{day}/{hour}/{formatted_date}_fct_afs_wc.csv'
-                
-                try:
-                    s3_hook.load_string(
-                        csv_buffer.getvalue(),
-                        key=s3_key,
-                        bucket_name=bucket_name,
-                        replace=True
-                    )
-                    logging.info(f"저장성공 첫 번째 데이터 행: {data[0]}")
-                    logging.info(f"{len(data)} 건 저장되었습니다.")
-                    kwargs['task_instance'].xcom_push(key='s3_key', value=s3_key)
-                except Exception as e:
-                    logging.error(f"S3 업로드 실패: {e}")
-                    raise ValueError(f"S3 업로드 실패: {e}")
-            else:
-                logging.error("ERROR : 유효한 데이터가 없어 삽입할 수 없습니다.")
-                raise ValueError("ERROR : 유효한 데이터가 없어 삽입할 수 없습니다.")
-        else:
-            logging.error("ERROR : 데이터 수신 실패", response_text)
-            raise ValueError(f"ERROR : 데이터 수신 실패 : {response_text}")
+        save_to_s3(data, s3_key)
+        kwargs['task_instance'].xcom_push(key='s3_key', value=s3_key)
     else:
-        logging.error(f"ERROR : 응답 코드 오류 {response.status_code}")
-        logging.error(f"ERROR : 메세지 :", response.text)
-        raise ValueError(f"ERROR : 응답코드오류 {response.status_code}, 메세지 : {response.text}")
-    
+        logging.error("ERROR : 유효한 데이터가 없어 삽입할 수 없습니다.")
+        raise ValueError("ERROR : 유효한 데이터가 없어 삽입할 수 없습니다.")
+
 def fct_afs_wc_to_redshift(data_interval_end: pendulum.datetime, **kwargs) -> None:
     logging.info("redshift 적재 시작")
     s3_key = kwargs['task_instance'].xcom_pull(task_ids='fct_afs_wc_to_s3', key='s3_key')
@@ -156,7 +158,6 @@ def fct_afs_wc_to_redshift(data_interval_end: pendulum.datetime, **kwargs) -> No
         try:
             reg_id, tm_fc, tm_ef, mood_key, stn_id, cnt_cd, min_ta, max_ta, min_l_ta, min_h_ta, max_l_ta, max_h_ta = row
             tm_fc = pendulum.parse(tm_fc, strict=False)
-            #data_key = data_interval_end.in_timezone(kst)
             data_key = data_interval_end + pendulum.duration(hours=9)
             created_at = tm_fc
             updated_at = tm_fc
@@ -169,7 +170,6 @@ def fct_afs_wc_to_redshift(data_interval_end: pendulum.datetime, **kwargs) -> No
         conn = redshift_hook.get_conn()
         cursor = conn.cursor()
 
-        # Redshift에 삽입할 SQL 쿼리 작성
         insert_query = """
             INSERT INTO raw_data.fct_afs_wc_info (REG_ID, TM_FC, TM_EF, MODE_KEY, STN_ID, CNT_CD, MIN_TA, MAX_TA, MIN_L_TA, MIN_H_TA, MAX_L_TA, MAX_H_TA, DATA_KEY, CREATED_AT, UPDATED_AT)
             VALUES %s;
