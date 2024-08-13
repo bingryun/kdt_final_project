@@ -38,9 +38,11 @@ def stn_inf_to_s3(data_interval_end, **kwargs):
     'authKey': api_key
     }
     response = requests.get(api_url, params=params)
+    response_200 = 200
     logging.info(f"API 상태코드: {response.status_code}")
+    
 
-    if response.status_code == 200:
+    if response.status_code == response_200:
         response_text = response.text
         logging.info(f"응답 데이터:\n{response_text}")
 
@@ -246,16 +248,16 @@ with DAG(
 ) as dag:
     dag.timezone = kst
     
-    stn_inf_to_s3_task = PythonOperator(
+    stn_inf_to_s3 = PythonOperator(
         task_id='stn_inf_to_s3',
         python_callable=stn_inf_to_s3,
         execution_timeout=pendulum.duration(hours=1),
     )
     
-    stn_inf_to_redshift_task = PythonOperator(
+    stn_inf_to_redshift = PythonOperator(
         task_id='stn_inf_to_redshift',
         python_callable=stn_inf_to_redshift,
         execution_timeout=pendulum.duration(hours=1),
     )
 
-    stn_inf_to_s3_task  >> stn_inf_to_redshift_task
+    stn_inf_to_s3  >> stn_inf_to_redshift

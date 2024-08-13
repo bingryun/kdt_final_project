@@ -186,9 +186,9 @@ with DAG(
         dag=dag,
     )
     
-    wait_for_weatherAPI_task = ExternalTaskSensor(
-        task_id='wait_for_weatherAPI_task',
-        external_dag_id='weatherAPI_to_s3_redshift_task',
+    wait_for_weatherAPI = ExternalTaskSensor(
+        task_id='wait_for_weatherAPI',
+        external_dag_id='weatherAPI_to_s3_redshift',
         external_task_id='weatherAPI_to_redshift',
         allowed_states=['success'],
         failed_states=['failed', 'skipped'],
@@ -205,4 +205,4 @@ with DAG(
         dag=dag,
     )
     
-    [wait_for_wc_task, wait_for_fct_medm_reg_task, wait_for_weatherAPI_task] >> mart_comr_api_insert_task
+    [wait_for_wc_task, wait_for_fct_medm_reg_task, wait_for_weatherAPI] >> mart_comr_api_insert_task

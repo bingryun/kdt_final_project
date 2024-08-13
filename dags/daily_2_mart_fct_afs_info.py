@@ -174,8 +174,8 @@ with DAG(
     dag.timezone = kst
     
     #선행 DAG
-    wait_for_wc_task = ExternalTaskSensor(
-        task_id='wait_for_wc_task',
+    wait_for_wc = ExternalTaskSensor(
+        task_id='wait_for_wc',
         external_dag_id='fct_afs_wc_to_s3_and_redshift',
         external_task_id='fct_afs_wc_to_redshift',
         allowed_states=['success'],
@@ -186,8 +186,8 @@ with DAG(
         dag=dag,
     )
     
-    wait_for_wl_task = ExternalTaskSensor(
-        task_id='wait_for_wl_task',
+    wait_for_wl = ExternalTaskSensor(
+        task_id='wait_for_wl',
         external_dag_id='fct_afs_wl_to_s3_and_redshift',
         external_task_id='fct_afs_wl_to_redshift',
         allowed_states=['success'],
@@ -205,4 +205,4 @@ with DAG(
         dag=dag,
     )
     
-    [wait_for_wc_task, wait_for_wl_task] >> mart_fct_afs_info_insert_task
+    [wait_for_wc, wait_for_wl] >> mart_fct_afs_info_insert_task

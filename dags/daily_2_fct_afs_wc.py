@@ -51,9 +51,11 @@ def fct_afs_wc_to_s3(data_interval_end, **kwargs):
     }
 
     response = requests.get(api_url, params=params)
+    response_200 = 200
+    column_len = 12
     logging.info(f"API 상태코드: {response.status_code}")
 
-    if response.status_code == 200:
+    if response.status_code == response_200:
         response_text = response.text
         logging.info(f"응답 데이터:\n{response_text}")
 
@@ -75,7 +77,7 @@ def fct_afs_wc_to_s3(data_interval_end, **kwargs):
                     if columns[-1] == '=':
                         columns = columns[:-1]
                     
-                    if len(columns) < 12:
+                    if len(columns) < column_len:
                         columns += [None] * (12 - len(columns))
 
                     try:
@@ -196,18 +198,18 @@ with DAG(
 ) as dag:
     dag.timezone = kst
     
-    fct_afs_wc_to_s3_task = PythonOperator(
+    fct_afs_wc_to_s3 = PythonOperator(
         task_id='fct_afs_wc_to_s3',
         python_callable=fct_afs_wc_to_s3,
         provide_context=True,
         execution_timeout=pendulum.duration(hours=1),
     )
     
-    fct_afs_wc_to_redshift_task = PythonOperator(
+    fct_afs_wc_to_redshift = PythonOperator(
         task_id='fct_afs_wc_to_redshift',
         python_callable=fct_afs_wc_to_redshift,
         provide_context=True,
         execution_timeout=pendulum.duration(hours=1),
     )
 
-    fct_afs_wc_to_s3_task >> fct_afs_wc_to_redshift_task
+    fct_afs_wc_to_s3 >> fct_afs_wc_to_redshift
