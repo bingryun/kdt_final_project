@@ -56,7 +56,7 @@ def fct_afs_wl_to_s3(data_interval_end, **kwargs):
 
     if response.status_code == 200:
         response_text = response.text
-
+    
         if "#START7777" in response_text and "#7777END" in response_text:
             lines = response_text.splitlines()
             data = []
@@ -87,15 +87,18 @@ def fct_afs_wl_to_s3(data_interval_end, **kwargs):
                         c = columns[5]
                         sky = columns[6]
                         pre = columns[7]
-                        if '없음' in columns[8]:
-                            conf_parts = columns[8].split(' ')
-                            conf = conf_parts[0]
-                            wf = conf_parts[1]
-                            rn_st = columns[9]
-                        else:
-                            conf = columns[8]
-                            wf = columns[9]  
-                            rn_st = columns[10]
+                        # if '없음' in columns[8]:
+                        #     conf_parts = columns[8].split(' ')
+                        #     conf = conf_parts[0]
+                        #     wf = conf_parts[1]
+                        #     rn_st = columns[9]
+                        # else:
+                        #     conf = columns[8]
+                        #     wf = columns[9]  
+                        #     rn_st = columns[10]
+                        conf = columns[8]
+                        wf = columns[9]  
+                        rn_st = columns[10]
                         data.append((reg_id, tm_st, tm_ed, mod, stn, c, sky, pre, conf, wf, rn_st))
                     except ValueError as e:
                         logging.warning(f"행을 파싱하는 중 오류 발생: {e}")
