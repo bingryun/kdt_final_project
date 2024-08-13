@@ -21,6 +21,12 @@ jobs:
       with:
         python-version: '3.x'
 
+    - name: Install Ruff
+      run: pip install ruff
+
+    - name: Run Ruff with selected rules
+      run: ruff . --config .ruff.toml
+
     - name: Set up SSH
       uses: webfactory/ssh-agent@v0.5.3
       with:
