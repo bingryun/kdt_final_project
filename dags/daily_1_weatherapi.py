@@ -27,7 +27,7 @@ default_args = {
     'on_success_callback': slackbot.success_alert,
 }
 
-def weatherAPI_to_s3(data_interval_end, **kwargs):
+def weatherAPI_to_s3(data_interval_end, **kwargs) -> None:
     api_url = "http://api.weatherapi.com/v1/forecast.json?"
     api_key = 'df6f070513664f3fb8e183525242807'
     
@@ -90,7 +90,7 @@ def weatherAPI_to_s3(data_interval_end, **kwargs):
         logging.error(f"S3 업로드 실패: {e}")
         raise ValueError(f"S3 업로드 실패: {e}")
     
-def weatherAPI_to_redshift(data_interval_end, **kwargs):
+def weatherAPI_to_redshift(data_interval_end, **kwargs) -> None:
     logging.info("redshift 적재 시작")
     s3_key = kwargs['task_instance'].xcom_pull(task_ids='weatherAPI_to_s3', key='s3_key')
     s3_path = f's3://team-okky-1-bucket/{s3_key}'

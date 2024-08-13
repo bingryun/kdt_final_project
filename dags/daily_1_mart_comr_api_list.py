@@ -22,7 +22,7 @@ default_args = {
     'on_success_callback': slackbot.success_alert,
 }
 
-def mart_comr_api_iist(data_interval_end):
+def mart_comr_api_iist(data_interval_end) -> None:
     logging.info("redshift 적재 시작")
     redshift_hook = PostgresHook(postgres_conn_id='AWS_Redshift')
     #base_dt=data_interval_end.in_timezone(kst).strftime('%m%d')
@@ -65,7 +65,7 @@ def mart_comr_api_iist(data_interval_end):
         to_char(T2.tm_ef, 'YYYYMMDD') as tm_ef,
         T2.min_ta,
         T2.max_ta,
-        CASE 
+        CASE
             WHEN T4.wf_pre_cd='WB00' THEN '강수없음'
             WHEN T4.wf_pre_cd='WB09' THEN '비'
             WHEN T4.wf_pre_cd='WB10' THEN '소나기'
@@ -74,20 +74,20 @@ def mart_comr_api_iist(data_interval_end):
             WHEN T4.wf_pre_cd='WB12' THEN '눈'
             ELSE '정보없음'
         END AS wf_pre_cd,
-        CASE 
+        CASE
             WHEN T4.wf_info IS NULL THEN '정보없음'
             ELSE T4.wf_info
         END AS wf_info,
         T2.data_key,
         T2.created_at,
         T2.updated_at
-    FROM 
+    FROM
         raw_data.fct_afs_wc_info T2
-    LEFT JOIN 
-        raw_data.fct_medm_reg_list T3 
+    LEFT JOIN
+        raw_data.fct_medm_reg_list T3
     ON T2.reg_id = T3.reg_id
-    LEFT JOIN 
-        raw_data.fct_afs_wl_info T4 
+    LEFT JOIN
+        raw_data.fct_afs_wl_info T4
     ON LEFT(T2.reg_id, 3) = LEFT(T4.reg_id, 3)
     AND T2.tm_fc = T4.tm_st
     AND T2.tm_ef = T4.tm_ed
@@ -108,7 +108,7 @@ def mart_comr_api_iist(data_interval_end):
     from raw_data.WeatherAPI_LIST
     WHERE 1=1
     AND data_key = TO_TIMESTAMP('{base_date}' || '07', 'YYYYMMDDHH24')
-    AND date BETWEEN TO_CHAR('{base_date}'::date + INTERVAL '2 day', 'YYYYMMDD') 
+    AND date BETWEEN TO_CHAR('{base_date}'::date + INTERVAL '2 day', 'YYYYMMDD')
         AND TO_CHAR('{base_date}'::date + INTERVAL '10 day', 'YYYYMMDD');
     """
     cursor.execute(insert_temp_query)
@@ -118,8 +118,8 @@ def mart_comr_api_iist(data_interval_end):
     merge_query = """
     MERGE INTO mart_data.comr_api_list
     USING temp_comr_api_list AS source
-    ON mart_data.comr_api_list.div_nm = source.div_nm 
-    AND mart_data.comr_api_list.reg_name = source.reg_name 
+    ON mart_data.comr_api_list.div_nm = source.div_nm
+    AND mart_data.comr_api_list.reg_name = source.reg_name
     and mart_data.comr_api_list.tm_ef = source.tm_ef
     WHEN MATCHED THEN
     UPDATE SET
@@ -198,11 +198,11 @@ with DAG(
         dag=dag,
     )
     
-    mart_comr_api_insert_task = PythonOperator(
-        task_id='mart_comr_api_iist',
+    mart_comr_api_iist_insert = PythonOperator(
+        task_id='mart_comr_api_iist_insert',
         python_callable=mart_comr_api_iist,
         execution_timeout=pendulum.duration(hours=1),
         dag=dag,
     )
     
-    [wait_for_wc_task, wait_for_fct_medm_reg_task, wait_for_weatherAPI] >> mart_comr_api_insert_task
+    [wait_for_wc_task, wait_for_fct_medm_reg_task, wait_for_weatherAPI] >> mart_comr_api_iist_insert

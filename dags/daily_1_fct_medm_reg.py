@@ -25,7 +25,7 @@ default_args = {
     'on_success_callback': slackbot.success_alert,
 }
 
-def fct_medm_reg_to_s3(**kwargs):
+def fct_medm_reg_to_s3(**kwargs) -> None:
     api_url = "https://apihub.kma.go.kr/api/typ01/url/fct_medm_reg.php?"
     api_key = "HGbLr74hS2qmy6--ITtqog"
 
@@ -112,7 +112,7 @@ def fct_medm_reg_to_s3(**kwargs):
         logging.error(f"ERROR : 메세지 :", response.text)
         raise ValueError(f"ERROR : 응답코드오류 {response.status_code}, 메세지 : {response.text}")
     
-def fct_medm_reg_to_redshift(data_interval_end, **kwargs):
+def fct_medm_reg_to_redshift(data_interval_end, **kwargs) -> None:
     logging.info("redshift 적재 시작")
     s3_key = kwargs['task_instance'].xcom_pull(task_ids='fct_medm_reg_to_s3', key='s3_key')
     s3_path = f's3://team-okky-1-bucket/{s3_key}'
