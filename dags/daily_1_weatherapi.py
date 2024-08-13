@@ -27,7 +27,7 @@ default_args = {
     'on_success_callback': slackbot.success_alert,
 }
 
-def weatherAPI_to_s3(data_interval_end, **kwargs) -> None:
+def weatherapi_to_s3(data_interval_end: pendulum.datetime, **kwargs) -> None:
     api_url = "http://api.weatherapi.com/v1/forecast.json?"
     api_key = 'df6f070513664f3fb8e183525242807'
     
@@ -90,9 +90,9 @@ def weatherAPI_to_s3(data_interval_end, **kwargs) -> None:
         logging.error(f"S3 업로드 실패: {e}")
         raise ValueError(f"S3 업로드 실패: {e}")
     
-def weatherAPI_to_redshift(data_interval_end, **kwargs) -> None:
+def weatherapi_to_redshift(data_interval_end: pendulum.datetime, **kwargs) -> None:
     logging.info("redshift 적재 시작")
-    s3_key = kwargs['task_instance'].xcom_pull(task_ids='weatherAPI_to_s3', key='s3_key')
+    s3_key = kwargs['task_instance'].xcom_pull(task_ids='weatherapi_to_s3', key='s3_key')
     s3_path = f's3://team-okky-1-bucket/{s3_key}'
     s3_hook = S3Hook(aws_conn_id='AWS_S3')
     redshift_hook = PostgresHook(postgres_conn_id='AWS_Redshift')
@@ -102,7 +102,7 @@ def weatherAPI_to_redshift(data_interval_end, **kwargs) -> None:
     logging.info(f"S3 경로: {s3_key}")
     
     csv_reader = csv.reader(StringIO(csv_content))
-    header = next(csv_reader)  # Skip 헤더
+    next(csv_reader)  # Skip 헤더
     
     data = []
     for row in csv_reader:
@@ -144,9 +144,9 @@ def weatherAPI_to_redshift(data_interval_end, **kwargs) -> None:
         raise ValueError("ERROR : 적재할 데이터가 없습니다.")
     
 with DAG(
-    'weatherAPI_to_s3_redshift',
+    'weatherapi_to_s3_redshift',
     default_args=default_args,
-    description='weatherAPI S3 & redshift 적재',
+    description='weatherapi S3 & redshift 적재',
     schedule_interval='0 7 * * *',
     catchup=True,
     dagrun_timeout=pendulum.duration(hours=2),
@@ -154,19 +154,19 @@ with DAG(
 ) as dag:
     dag.timezone = kst
     
-    weatherAPI_to_s3 = PythonOperator(
-        task_id='weatherAPI_to_s3',
-        python_callable=weatherAPI_to_s3,
+    weatherapi_to_s3 = PythonOperator(
+        task_id='weatherapi_to_s3',
+        python_callable=weatherapi_to_s3,
         provide_context=True,
         execution_timeout=pendulum.duration(hours=1),
     )
 
-    weatherAPI_to_redshift = PythonOperator(
-        task_id='weatherAPI_to_redshift',
-        python_callable=weatherAPI_to_redshift,
+    weatherapi_to_redshift = PythonOperator(
+        task_id='weatherapi_to_redshift',
+        python_callable=weatherapi_to_redshift,
         provide_context=True,
         execution_timeout=pendulum.duration(hours=1),
     )
 
-    weatherAPI_to_s3 >> weatherAPI_to_redshift
+    weatherapi_to_s3 >> weatherapi_to_redshift
 

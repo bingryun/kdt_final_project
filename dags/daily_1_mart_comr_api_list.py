@@ -22,7 +22,7 @@ default_args = {
     'on_success_callback': slackbot.success_alert,
 }
 
-def mart_comr_api_iist(data_interval_end) -> None:
+def mart_comr_api_iist(data_interval_end: pendulum.datetime) -> None:
     logging.info("redshift 적재 시작")
     redshift_hook = PostgresHook(postgres_conn_id='AWS_Redshift')
     #base_dt=data_interval_end.in_timezone(kst).strftime('%m%d')
