@@ -18,7 +18,7 @@ kst = pendulum.timezone("Asia/Seoul")
 default_args = {
     'owner': 'chansu',
     'depends_on_past': True,  # 선행작업의존여부
-    'start_date': pendulum.datetime(2024, 8, 2, tz=kst),
+    'start_date': pendulum.datetime(2024, 8, 13, tz=kst),
     'email_on_failure': False,
     'email_on_retry': False,
     'retries': 1,
@@ -39,10 +39,11 @@ def weatherAPI_to_s3(data_interval_end, **kwargs):
     }
     
     response = requests.get(api_url, params=params)
+    response_200 = 200
     logging.info(f"API 상태코드: {response.status_code}")
 
 
-    if response.status_code == 200:
+    if response.status_code == response_200:
         data = response.json()
     
     # 필요한 데이터 추출
@@ -143,7 +144,7 @@ def weatherAPI_to_redshift(data_interval_end, **kwargs):
         raise ValueError("ERROR : 적재할 데이터가 없습니다.")
     
 with DAG(
-    'weatherAPI_to_s3_redshift_task',
+    'weatherAPI_to_s3_redshift',
     default_args=default_args,
     description='weatherAPI S3 & redshift 적재',
     schedule_interval='0 7 * * *',
@@ -153,19 +154,19 @@ with DAG(
 ) as dag:
     dag.timezone = kst
     
-    weatherAPI_to_s3_task = PythonOperator(
+    weatherAPI_to_s3 = PythonOperator(
         task_id='weatherAPI_to_s3',
         python_callable=weatherAPI_to_s3,
         provide_context=True,
         execution_timeout=pendulum.duration(hours=1),
     )
 
-    weatherAPI_to_redshift_task = PythonOperator(
+    weatherAPI_to_redshift = PythonOperator(
         task_id='weatherAPI_to_redshift',
         python_callable=weatherAPI_to_redshift,
         provide_context=True,
         execution_timeout=pendulum.duration(hours=1),
     )
 
-    weatherAPI_to_s3_task >> weatherAPI_to_redshift_task
+    weatherAPI_to_s3 >> weatherAPI_to_redshift
 

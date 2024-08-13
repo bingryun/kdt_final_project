@@ -155,8 +155,8 @@ with DAG(
     dag.timezone = kst
     
     #선행 DAG
-    wait_for_for_kma_sfcdd3_task = ExternalTaskSensor(
-        task_id='wait_for_kma_sfcdd3_task',
+    wait_for_kma_sfcdd3 = ExternalTaskSensor(
+        task_id='wait_for_kma_sfcdd3',
         external_dag_id='kma_sfcdd3_to_s3_and_redshift',
         external_task_id='kma_stcdd3_to_redshift',
         allowed_states=['success'],
@@ -167,8 +167,8 @@ with DAG(
         dag=dag,
     )
     
-    wait_for_stn_inf_task = ExternalTaskSensor(
-        task_id='wait_for_stn_inf_task',
+    wait_for_stn_inf = ExternalTaskSensor(
+        task_id='wait_for_stn_inf',
         external_dag_id='stn_inf_to_s3_and_redshift',
         external_task_id='stn_inf_to_redshift',
         allowed_states=['success'],
@@ -186,4 +186,4 @@ with DAG(
         dag=dag,
     )
     
-    [wait_for_for_kma_sfcdd3_task, wait_for_stn_inf_task] >> mart_kma_sfcdd3_stn_iist_insert_task
+    [wait_for_kma_sfcdd3, wait_for_stn_inf] >> mart_kma_sfcdd3_stn_iist_insert_task

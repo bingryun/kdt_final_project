@@ -37,8 +37,10 @@ def fct_medm_reg_to_s3(**kwargs):
     }
 
     response = requests.get(api_url, params=params)
+    response_200 = 200
+    column_len = 5
 
-    if response.status_code == 200:
+    if response.status_code == response_200:
         response_text = response.text
         
         if "#START7777" in response_text and "#7777END" in response_text:
@@ -58,7 +60,7 @@ def fct_medm_reg_to_s3(**kwargs):
             for line in lines[start_index:end_index]:
                 if line.strip():
                     columns = line.split()
-                    if len(columns) >= 5:
+                    if len(columns) >= column_len:
                         try:
                             reg_id = columns[0]
                             tm_st = pendulum.parse(columns[1], strict=False, tz=kst) if columns[1] else None
@@ -210,15 +212,15 @@ with DAG(
 ) as dag:
     dag.timezone = kst
     
-    fct_medm_reg_to_s3_task = PythonOperator(
+    fct_medm_reg_to_s3 = PythonOperator(
         task_id='fct_medm_reg_to_s3',
         python_callable=fct_medm_reg_to_s3,
     )
     
-    load_to_redshift_task = PythonOperator(
+    fct_medm_reg_to_redshift = PythonOperator(
         task_id='fct_medm_reg_to_redshift',
         python_callable=fct_medm_reg_to_redshift,
         provide_context=True,
     )
 
-    fct_medm_reg_to_s3_task >> load_to_redshift_task
+    fct_medm_reg_to_s3 >> fct_medm_reg_to_redshift
