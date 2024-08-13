@@ -35,6 +35,7 @@ def fetch_api_data(api_url: str, params: dict) -> str:
     return response.text
 
 def parse_response_data(response_text: str) -> list:
+    column_len = 5
     if "#START7777" not in response_text or "#7777END" not in response_text:
         logging.error("ERROR : 데이터 수신 실패", response_text)
         raise ValueError(f"ERROR : 데이터 수신 실패 : {response_text}")
@@ -53,7 +54,7 @@ def parse_response_data(response_text: str) -> list:
     for line in lines[start_index:end_index]:
         if line.strip():
             columns = line.split()
-            if len(columns) >= 5:
+            if len(columns) >= column_len:
                 try:
                     reg_id = columns[0]
                     tm_st = pendulum.parse(columns[1], strict=False, tz=kst) if columns[1] else None
