@@ -22,7 +22,7 @@ default_args = {
     'on_success_callback': slackbot.success_alert,
 }
 
-def mart_kma_sfcdd3_stn_iist(data_interval_end):
+def mart_kma_sfcdd3_stn_iist(data_interval_end) -> None:
     logging.info("redshift 적재 시작")
     redshift_hook = PostgresHook(postgres_conn_id='AWS_Redshift')
     
@@ -67,23 +67,23 @@ def mart_kma_sfcdd3_stn_iist(data_interval_end):
     created_at,
     updated_at
     )
-    SELECT 
-        T2.stn_ko, 
-        T1.tm_id, 
-        T1.ta_avg, 
-        T1.ta_min, 
+    SELECT
+        T2.stn_ko,
+        T1.tm_id,
+        T1.ta_avg,
+        T1.ta_min,
         T1.ta_max,
         case when T1.WS_MAX = -9 then 0
-            else T1.WS_MAX 
+            else T1.WS_MAX
         end as WS_MAX,
         case when T1.HM_MIN = -9 then NULL
             else T1.HM_MIN 
         end as HM_MIN,
         case when T1.RN_DAY = -9 then 0
-            else T1.RN_DAY 
+            else T1.RN_DAY
         end as RN_DAY,
         case when T1.SD_MAX = -9 then 0
-            else T1.SD_MAX 
+            else T1.SD_MAX
         end as SD_MAX,
         T1.stn_id,
         T1.data_key,
@@ -104,8 +104,8 @@ def mart_kma_sfcdd3_stn_iist(data_interval_end):
     merge_query = """
     MERGE INTO mart_data.kma_sfcdd3_stn_iist
     USING temp_kma_sfcdd3_stn_iist AS source
-    ON mart_data.kma_sfcdd3_stn_iist.stn_ko = source.stn_ko 
-    AND mart_data.kma_sfcdd3_stn_iist.tm_id = source.tm_id 
+    ON mart_data.kma_sfcdd3_stn_iist.stn_ko = source.stn_ko
+    AND mart_data.kma_sfcdd3_stn_iist.tm_id = source.tm_id
     and mart_data.kma_sfcdd3_stn_iist.data_key = source.data_key
     WHEN MATCHED THEN
     UPDATE SET
@@ -179,11 +179,11 @@ with DAG(
         dag=dag,
     )
     
-    mart_kma_sfcdd3_stn_iist_insert_task = PythonOperator(
-        task_id='mart_kma_sfcdd3_stn_iist',
+    mart_kma_sfcdd3_stn_iist_insert = PythonOperator(
+        task_id='mart_kma_sfcdd3_stn_iist_insert',
         python_callable=mart_kma_sfcdd3_stn_iist,
         execution_timeout=pendulum.duration(hours=1),
         dag=dag,
     )
     
-    [wait_for_kma_sfcdd3, wait_for_stn_inf] >> mart_kma_sfcdd3_stn_iist_insert_task
+    [wait_for_kma_sfcdd3, wait_for_stn_inf] >> mart_kma_sfcdd3_stn_iist_insert
