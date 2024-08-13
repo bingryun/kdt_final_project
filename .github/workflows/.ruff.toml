@@ -1,3 +1,4 @@
+[lint]
 select = [
     "F", "AIR001", "E101", "E201", "E202", "E203",
     "E204", "E401", "E402", "E701", "E702", "E703", "E711", "E712",
@@ -7,3 +8,6 @@ select = [
     "N806", "N807", "N818", "N999", "UP032", "UP034", "ANN001", "ANN201",
     "ANN202", "S105", "S110", "S112", "A001", "B025", "ICN", "Q", "PLR2004"
 ]
+
+# Enable preview mode to allow the selection of experimental features
+preview = true
