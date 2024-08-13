@@ -26,7 +26,7 @@ default_args = {
     'on_success_callback': slackbot.success_alert,
 }
     
-def fct_afs_wl_to_s3(data_interval_end, **kwargs) -> None:
+def fct_afs_wl_to_s3(data_interval_end: pendulum.datetime, **kwargs) -> None:
     api_url = "https://apihub.kma.go.kr/api/typ01/url/fct_afs_wl.php"
     api_key = "HGbLr74hS2qmy6--ITtqog"
     
@@ -106,7 +106,7 @@ def fct_afs_wl_to_s3(data_interval_end, **kwargs) -> None:
                         logging.warning(f"행을 파싱하는 중 오류 발생: {e}")
             
             if data:
-                df = pd.DataFrame(data, columns=['REG_ID', 'TM_ST', 'TM_ED', 'MODE_KEY', 'STN_ID', 'CNT_CD', 'WF_SKY_CD', 'WF_PRE_CD', 'CONF_LV', 'WF_INFO', 'RN_ST'])
+                weather_df = pd.DataFrame(data, columns=['REG_ID', 'TM_ST', 'TM_ED', 'MODE_KEY', 'STN_ID', 'CNT_CD', 'WF_SKY_CD', 'WF_PRE_CD', 'CONF_LV', 'WF_INFO', 'RN_ST'])
 
                 year = tm_st.strftime('%Y')
                 month = tm_st.strftime('%m')
@@ -119,7 +119,7 @@ def fct_afs_wl_to_s3(data_interval_end, **kwargs) -> None:
                 s3_key = f'fct_afs_wl/{year}/{month}/{day}/{hour}/{formatted_date}fct_afs_wl.csv'
                 
                 csv_buffer = StringIO()
-                df.to_csv(csv_buffer, index=False, chunksize=100000)
+                weather_df.to_csv(csv_buffer, index=False, chunksize=100000)
                 
                 try:
                     s3_hook.load_string(
@@ -145,7 +145,7 @@ def fct_afs_wl_to_s3(data_interval_end, **kwargs) -> None:
         logging.error(f"ERROR : 메세지 :", response.text)
         raise ValueError(f"ERROR : 응답코드오류 {response.status_code}, 메세지 : {response.text}")
 
-def fct_afs_wl_to_redshift(data_interval_end, **kwargs) -> None:
+def fct_afs_wl_to_redshift(data_interval_end: pendulum.datetime, **kwargs) -> None:
     logging.info("redshift 적재 시작")
     s3_key = kwargs['task_instance'].xcom_pull(task_ids='fct_afs_wl_to_s3', key='s3_key')
     s3_path = f's3://team-okky-1-bucket/{s3_key}'
@@ -157,7 +157,7 @@ def fct_afs_wl_to_redshift(data_interval_end, **kwargs) -> None:
     logging.info(f"S3 경로: {s3_key}")
     
     csv_reader = csv.reader(StringIO(csv_content))
-    header = next(csv_reader)  # Skip 헤더
+    next(csv_reader)  # Skip 헤더
     
     data = []
     for row in csv_reader:

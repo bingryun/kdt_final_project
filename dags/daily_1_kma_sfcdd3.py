@@ -34,7 +34,7 @@ def parse_fixed_width(line: str) -> List[str]:
     
     return columns
     
-def kma_sfcdd3_to_s3(data_interval_end, **kwargs) -> None:
+def kma_sfcdd3_to_s3(data_interval_end: pendulum.datetime, **kwargs) -> None:
     api_url = "https://apihub.kma.go.kr/api/typ01/url/kma_sfcdd3.php?"
     api_key = "HGbLr74hS2qmy6--ITtqog"
     
@@ -77,7 +77,7 @@ def kma_sfcdd3_to_s3(data_interval_end, **kwargs) -> None:
                     logging.info(f"Parsed data: {parsed_data}")
 
             if data:   
-                df = pd.DataFrame(data, columns=[
+                weather_df = pd.DataFrame(data, columns=[
                     'TM', 'STN', 'WS_AVG', 'WR_DAY', 'WD_MAX', 'WS_MAX',
                     'WS_MAX_TM', 'WD_INS', 'WS_INS', 'WS_INS_TM', 'TA_AVG',
                     'TA_MAX', 'TA_MAX_TM', 'TA_MIN', 'TA_MIN_TM', 'TD_AVG',
@@ -102,7 +102,7 @@ def kma_sfcdd3_to_s3(data_interval_end, **kwargs) -> None:
                 s3_key = f'kma_sfcdd3/{year}/{month}/{day}/{formatted_date}_kma_sfcdd3.csv'
                 
                 csv_buffer = StringIO()
-                df.to_csv(csv_buffer, index=False, chunksize=100000)
+                weather_df.to_csv(csv_buffer, index=False, chunksize=100000)
                 
                 try:
                     s3_hook.load_string(
@@ -128,7 +128,7 @@ def kma_sfcdd3_to_s3(data_interval_end, **kwargs) -> None:
         logging.error(f"ERROR : 메세지 :", response.text)
         raise ValueError(f"ERROR : 응답코드오류 {response.status_code}, 메세지 : {response.text}")
 
-def kma_stcdd3_to_redshift(data_interval_end, **kwargs) -> None:
+def kma_stcdd3_to_redshift(data_interval_end: pendulum.datetime, **kwargs) -> None:
     logging.info("redshift 적재 시작")
     s3_key = kwargs['task_instance'].xcom_pull(task_ids='kma_sfcdd3_to_s3', key='s3_key')
     s3_path = f's3://team-okky-1-bucket/{s3_key}'

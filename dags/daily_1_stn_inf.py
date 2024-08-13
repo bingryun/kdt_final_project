@@ -27,7 +27,7 @@ default_args = {
     'on_success_callback': slackbot.success_alert,
 }
 
-def stn_inf_to_s3(data_interval_end, **kwargs) -> None:
+def stn_inf_to_s3(data_interval_end: pendulum.datetime, **kwargs) -> None:
     api_url = "https://apihub.kma.go.kr/api/typ01/url/stn_inf.php?"
     api_key = "HGbLr74hS2qmy6--ITtqog"
     params = {
@@ -133,7 +133,7 @@ def stn_inf_to_s3(data_interval_end, **kwargs) -> None:
         logging.error(f"ERROR : 메세지 :", response.text)
         raise ValueError(f"ERROR : 응답코드오류 {response.status_code}, 메세지 : {response.text}")
     
-def stn_inf_to_redshift(data_interval_end, **kwargs) -> None:
+def stn_inf_to_redshift(data_interval_end: pendulum.datetime, **kwargs) -> None:
     logging.info("redshift 적재 시작")
     s3_key = kwargs['task_instance'].xcom_pull(task_ids='stn_inf_to_s3', key='s3_key')
     s3_path = f's3://team-okky-1-bucket/{s3_key}'
