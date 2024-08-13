@@ -22,6 +22,6 @@ jobs:
       run: pip install ruff
 
     - name: Run Ruff with selected rules
-      run: ruff check . --config .ruff.toml
+      run: ruff check . --config .github/workflows/.ruff.toml
     
 
