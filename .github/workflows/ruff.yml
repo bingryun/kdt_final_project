@@ -21,7 +21,5 @@ jobs:
     - name: Install Ruff
       run: pip install ruff
 
-    - name: Run Ruff with selected rules
-      run: ruff check dags/daily_*.py --config .github/workflows/.ruff.toml
-    
-
+    - name: Run Ruff with selected rules and auto-fix
+      run: ruff check dags/daily_*.py --fix --config .github/workflows/.ruff.toml
