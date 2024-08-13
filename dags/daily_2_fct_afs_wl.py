@@ -28,7 +28,8 @@ default_args = {
 
 def fetch_api_data(api_url: str, params: dict) -> str:
     response = requests.get(api_url, params=params)
-    if response.status_code != 200:
+    response_200 = 200
+    if response.status_code != response_200:
         logging.error(f"ERROR : 응답 코드 오류 {response.status_code}")
         raise ValueError(f"ERROR : 응답코드오류 {response.status_code}, 메세지 : {response.text}")
     return response.text
