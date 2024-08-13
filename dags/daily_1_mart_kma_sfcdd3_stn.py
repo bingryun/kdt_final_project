@@ -77,7 +77,7 @@ def mart_kma_sfcdd3_stn_iist(data_interval_end: pendulum.datetime) -> None:
             else T1.WS_MAX
         end as WS_MAX,
         case when T1.HM_MIN = -9 then NULL
-            else T1.HM_MIN 
+            else T1.HM_MIN
         end as HM_MIN,
         case when T1.RN_DAY = -9 then 0
             else T1.RN_DAY

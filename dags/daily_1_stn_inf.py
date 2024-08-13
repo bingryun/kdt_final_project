@@ -39,6 +39,7 @@ def stn_inf_to_s3(data_interval_end: pendulum.datetime, **kwargs) -> None:
     }
     response = requests.get(api_url, params=params)
     response_200 = 200
+    column_len = 15
     logging.info(f"API 상태코드: {response.status_code}")
     
 
@@ -78,12 +79,12 @@ def stn_inf_to_s3(data_interval_end: pendulum.datetime, **kwargs) -> None:
                         stn_ko = columns[10]
 
                         # stn_en에서 공백이 포함된 경우를 처리
-                        if len(columns) == 15:
+                        if len(columns) == column_len:
                             stn_en = columns[11]
                             fct_id = columns[12]
                             law_id = columns[13]
                             basin = columns[14]
-                        elif len(columns) > 15:
+                        elif len(columns) > column_len:
                             stn_en = ' '.join(columns[11:-3])
                             fct_id = columns[-3]
                             law_id = columns[-2]
