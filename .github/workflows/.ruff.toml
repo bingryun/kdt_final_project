@@ -1,4 +1,4 @@
-[ruff.lint]
+[lint]
 select = [
     "F", 
     "E", 
